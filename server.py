@@ -4,7 +4,7 @@ from datetime import datetime
 import base64, os
 
 app = Flask(__name__)
-CORS(app, origins=["https://gino-ctrl.github.io"])  # Consente solo richieste dal tuo GitHub Pages
+CORS(app, origins=["https://gino-ctrl.github.io"])
 
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -28,57 +28,42 @@ def upload():
 def serve_file(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
-@app.route("/list", methods=["GET"])
-def list_images():
-    files = sorted(os.listdir(UPLOAD_FOLDER))
-    items = []
+@app.route("/gallery")
+def gallery():
+    files = sorted(os.listdir(UPLOAD_FOLDER), reverse=True)
+    images = []
 
     for f in files:
         try:
-            parts = f.rsplit("_", 1)[1].replace(".png", "")
-            timestamp = datetime.strptime(parts, "%Y%m%d%H%M%S")
-            dt = timestamp.strftime("%d/%m/%Y ore %H:%M:%S")
+            timestamp_str = f.rsplit("_", 1)[1].replace(".png", "")
+            timestamp = datetime.strptime(timestamp_str, "%Y%m%d%H%M%S")
+            ora = timestamp.strftime("%d/%m/%Y - %H:%M:%S")
         except:
-            dt = "Data sconosciuta"
+            ora = "Data sconosciuta"
 
-        url = f"https://{request.host}/uploads/{f}"
-        items.append(f"<li><strong>{f}</strong> – {dt} – <a href='{url}' target='_blank'>[Apri immagine]</a></li>")
+        images.append(f"""
+            <div style="margin:15px; max-width: 400px;">
+                <img src="/uploads/{f}" style="max-width: 100%; height: auto; border:1px solid #ccc; border-radius:6px;"><br>
+                <small>{f} – <strong>{ora}</strong></small>
+            </div>
+        """)
 
     html = f"""
     <html>
-    <head><title>Elenco immagini</title></head>
-    <body style="font-family:Arial">
-        <h2>Lista immagini caricate</h2>
-        <ul>
-            {''.join(items)}
-        </ul>
+    <head><title>Galleria immagini</title></head>
+    <body style="font-family:sans-serif; padding:20px;">
+      <h2>Galleria Immagini</h2>
+      <div style="display: flex; flex-wrap: wrap; justify-content: center;">
+        {''.join(images)}
+      </div>
     </body>
     </html>
     """
     return html
 
-@app.route("/gallery")
-def gallery():
-    files = os.listdir(UPLOAD_FOLDER)
-    images = [
-        f'<div style="margin:10px"><img src="/uploads/{f}" width="300"><br><small>{f}</small></div>'
-        for f in files
-    ]
-    return f"""
-    <html>
-      <head><title>Galleria immagini</title></head>
-      <body style="font-family:sans-serif">
-        <h2>Foto salvate</h2>
-        <div style="display:flex; flex-wrap:wrap">{''.join(images)}</div>
-      </body>
-    </html>
-    """
-
 @app.route("/", methods=["GET", "POST"])
 def home():
-    if request.method == "POST":
-        return jsonify({"status": "error", "message": "Usa /upload per inviare immagini"}), 405
-    return "<h2>Server attivo. Usa /upload per POST, /list per elenco o /gallery per galleria.</h2>"
+    return "<h2>Server attivo. Usa /upload per POST, /gallery per galleria.</h2>"
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
