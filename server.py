@@ -1,9 +1,8 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 import base64, os
 from datetime import datetime
 
 app = Flask(__name__)
-
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -21,6 +20,18 @@ def upload():
         f.write(base64.b64decode(image_data))
 
     return jsonify({"status": "success", "file": filename})
+
+# ROUTE PER VEDERE UNA SINGOLA IMMAGINE
+@app.route('/uploads/<filename>')
+def serve_file(filename):
+    return send_from_directory(UPLOAD_FOLDER, filename)
+
+# ROUTE PER LISTARE TUTTE LE IMMAGINI
+@app.route('/list', methods=["GET"])
+def list_images():
+    files = os.listdir(UPLOAD_FOLDER)
+    urls = [f"https://{request.host}/uploads/{f}" for f in files]
+    return jsonify(urls)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
