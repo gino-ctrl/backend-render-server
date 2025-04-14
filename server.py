@@ -35,3 +35,6 @@ def list_images():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
+    @app.route("/")
+def home():
+    return "<h2>Server attivo. Usa /upload per POST e /list per vedere le immagini.</h2>"
