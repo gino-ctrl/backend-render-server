@@ -1,4 +1,10 @@
 from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
+import base64, os
+from datetime import datetime
+
+app = Flask(__name__)
+CORS(app)  # <-- Questa riga risolve il tuo problema CORS
 import base64, os
 from datetime import datetime
 
