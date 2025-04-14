@@ -4,11 +4,8 @@ import base64, os
 from datetime import datetime
 
 app = Flask(__name__)
-CORS(app)  # <-- Questa riga risolve il tuo problema CORS
-import base64, os
-from datetime import datetime
+CORS(app, origins=["https://gino-ctrl.github.io"])  # <-- versione sicura, SOLO da GitHub Pages
 
-app = Flask(__name__)
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
@@ -27,23 +24,19 @@ def upload():
 
     return jsonify({"status": "success", "file": filename})
 
-# ROUTE PER VEDERE UNA SINGOLA IMMAGINE
 @app.route('/uploads/<filename>')
 def serve_file(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
-# ROUTE PER LISTARE TUTTE LE IMMAGINI
 @app.route('/list', methods=["GET"])
 def list_images():
     files = os.listdir(UPLOAD_FOLDER)
     urls = [f"https://{request.host}/uploads/{f}" for f in files]
     return jsonify(urls)
 
-# HOMEPAGE PER VERIFICA SERVER
 @app.route("/")
 def home():
     return "<h2>Server attivo. Usa /upload per POST e /list per vedere le immagini.</h2>"
 
-# AVVIO SERVER
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
