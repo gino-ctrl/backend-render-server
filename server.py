@@ -31,31 +31,37 @@ def serve_file(filename):
 @app.route("/gallery")
 def gallery():
     files = sorted(os.listdir(UPLOAD_FOLDER), reverse=True)
-    images = []
+    images_html = ""
 
     for f in files:
+        if not f.lower().endswith(".png"):
+            continue  # ignora file non immagine
+
         try:
             timestamp_str = f.rsplit("_", 1)[1].replace(".png", "")
             timestamp = datetime.strptime(timestamp_str, "%Y%m%d%H%M%S")
-            ora = timestamp.strftime("%d/%m/%Y - %H:%M:%S")
+            ora_locale = timestamp.strftime("%d/%m/%Y - %H:%M:%S")
         except:
-            ora = "Data sconosciuta"
+            ora_locale = "Data sconosciuta"
 
-        images.append(f"""
-            <div style="margin:15px; max-width: 400px;">
-                <img src="/uploads/{f}" style="max-width: 100%; height: auto; border:1px solid #ccc; border-radius:6px;"><br>
-                <small>{f} – <strong>{ora}</strong></small>
+        images_html += f"""
+            <div style="margin: 15px; text-align: center; max-width: 400px;">
+                <img src="/uploads/{f}" style="max-width: 100%; height: auto; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"><br>
+                <div style="margin-top: 6px; font-size: 14px; color: #333;">{ora_locale}</div>
             </div>
-        """)
+        """
 
-    html = f"""
+    return f"""
     <html>
-    <head><title>Galleria immagini</title></head>
-    <body style="font-family:sans-serif; padding:20px;">
-      <h2>Galleria Immagini</h2>
-      <div style="display: flex; flex-wrap: wrap; justify-content: center;">
-        {''.join(images)}
-      </div>
+    <head>
+        <title>Galleria immagini</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="font-family: sans-serif; padding: 20px; background-color: #f9f9f9;">
+        <h2 style="text-align: center; color: #003366;">Galleria Accessi</h2>
+        <div style="display: flex; flex-wrap: wrap; justify-content: center;">
+            {images_html}
+        </div>
     </body>
     </html>
     """
