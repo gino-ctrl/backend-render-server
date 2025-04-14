@@ -33,8 +33,11 @@ def list_images():
     urls = [f"https://{request.host}/uploads/{f}" for f in files]
     return jsonify(urls)
 
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
-    @app.route("/")
+# HOMEPAGE PER VERIFICA SERVER
+@app.route("/")
 def home():
     return "<h2>Server attivo. Usa /upload per POST e /list per vedere le immagini.</h2>"
+
+# AVVIO SERVER
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=10000)
