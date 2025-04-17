@@ -7,11 +7,11 @@ import base64, os, pytz
 # === CONFIGURAZIONE === #
 UPLOAD_FOLDER = "uploads"
 LOG_FILE = "accessi.log"
-USERNAME = "7482739"
-PASSWORD = "JMpspLd8e!!KXRfXst*N"
-ORIGIN = "https://gino-ctrl.github.io"  # autorizza solo il tuo dominio
+USERNAME = "admin"
+PASSWORD = "segreto123"
+ORIGIN = "https://gino-ctrl.github.io"
 
-# === SETUP APP === #
+# === AVVIO APP === #
 app = Flask(__name__)
 CORS(app, origins=[ORIGIN])
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -61,6 +61,19 @@ def upload():
         log.write(log_line)
 
     return jsonify({"status": "success", "file": filename})
+
+# === ENDPOINT: /track === #
+@app.route("/track", methods=["POST"])
+def track():
+    now = datetime.now(italian_tz)
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+    user_agent = request.headers.get("User-Agent", "Sconosciuto")
+    log_line = f"[{now.strftime('%d/%m/%Y %H:%M:%S')}] IP: {ip} | User-Agent: {user_agent} | Evento: visita sito\n"
+
+    with open(LOG_FILE, "a", encoding="utf-8") as log:
+        log.write(log_line)
+
+    return jsonify({"status": "logged"})
 
 # === ENDPOINT: /logs (protetto) === #
 @app.route("/logs")
@@ -129,11 +142,11 @@ def gallery():
 def serve_file(filename):
     return send_from_directory(UPLOAD_FOLDER, filename)
 
-# === HOME PAGE === #
+# === TEST === #
 @app.route("/")
 def home():
-    return "<h3>Server attivo. Usa /upload per invio, /gallery e /logs con password.</h3>"
+    return "<h3>Server attivo. Usa /upload per invio, /track per log automatico, /gallery e /logs con password.</h3>"
 
-# === AVVIO SERVER LOCALE (solo debug) === #
+# === AVVIO LOCALE === #
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
