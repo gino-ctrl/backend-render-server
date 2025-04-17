@@ -7,8 +7,8 @@ import base64, os, pytz
 # === CONFIGURAZIONE === #
 UPLOAD_FOLDER = "uploads"
 LOG_FILE = "accessi.log"
-USERNAME = "admin"
-PASSWORD = "segreto123"
+USERNAME = "7482739"
+PASSWORD = "JMpspLd8e!!KXRfXst*N"
 ORIGIN = "https://gino-ctrl.github.io"  # autorizza solo il tuo dominio
 
 # === SETUP APP === #
