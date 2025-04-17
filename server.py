@@ -1,13 +1,15 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 from datetime import datetime
-import base64, os
+import base64, os, pytz
 
 app = Flask(__name__)
 CORS(app, origins=["https://gino-ctrl.github.io"])
 
 UPLOAD_FOLDER = "uploads"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+italian_tz = pytz.timezone("Europe/Rome")
 
 @app.route("/upload", methods=["POST"])
 def upload():
@@ -16,7 +18,8 @@ def upload():
     action = data["action"]
 
     image_data = image_data.split(",")[1]
-    filename = f"{action}_{datetime.now().strftime('%Y%m%d%H%M%S')}.png"
+    now = datetime.now(italian_tz)
+    filename = f"{action}_{now.strftime('%Y%m%d%H%M%S')}.png"
     path = os.path.join(UPLOAD_FOLDER, filename)
 
     with open(path, "wb") as f:
@@ -35,11 +38,11 @@ def gallery():
 
     for f in files:
         if not f.lower().endswith(".png"):
-            continue  # ignora file non immagine
+            continue
 
         try:
             timestamp_str = f.rsplit("_", 1)[1].replace(".png", "")
-            timestamp = datetime.strptime(timestamp_str, "%Y%m%d%H%M%S")
+            timestamp = italian_tz.localize(datetime.strptime(timestamp_str, "%Y%m%d%H%M%S"))
             ora_locale = timestamp.strftime("%d/%m/%Y - %H:%M:%S")
         except:
             ora_locale = "Data sconosciuta"
@@ -65,7 +68,6 @@ def gallery():
     </body>
     </html>
     """
-    return html
 
 @app.route("/", methods=["GET", "POST"])
 def home():
