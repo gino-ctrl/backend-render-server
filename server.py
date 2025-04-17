@@ -152,7 +152,7 @@ def tracker_image():
     now = datetime.now(italian_tz)
     ip = request.headers.get("X-Forwarded-For", request.remote_addr)
     user_agent = request.headers.get("User-Agent", "Sconosciuto")
-    log_line = f"[{now.strftime('%d/%m/%Y %H:%M:%S')}] IP: {ip} | User-Agent: {user_agent} | Evento: apertura PDF\n"
+    log_line = f"[{now.strftime('%d/%m/%Y %H:%M:%S')}] IP: {ip} | User-Agent: {user_agent} | Evento: apertura ricevuta\n"
 
     with open(LOG_FILE, "a", encoding="utf-8") as log:
         log.write(log_line)
