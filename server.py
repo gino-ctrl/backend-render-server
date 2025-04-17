@@ -19,10 +19,16 @@ def upload():
 
     now = datetime.now(italian_tz)
 
-    if action == "refused":
-        print(f"[RIFIUTO WEBCAM] Accesso negato alle {now.strftime('%d/%m/%Y - %H:%M:%S')}")
-        return jsonify({"status": "refused"})
+if action == "refused":
+    now = datetime.now(italian_tz)
+    timestamp = now.strftime("%d/%m/%Y - %H:%M:%S")
+    message = f"[RIFIUTO WEBCAM] Accesso negato alle {timestamp}"
+    
+    print(message)
+    with open("logs.txt", "a") as log_file:
+        log_file.write(message + "\n")
 
+    return jsonify({"status": "refused"})
     if not image_data:
         return jsonify({"status": "error", "message": "Nessuna immagine"}), 400
 
