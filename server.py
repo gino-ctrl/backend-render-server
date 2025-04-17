@@ -14,11 +14,19 @@ italian_tz = pytz.timezone("Europe/Rome")
 @app.route("/upload", methods=["POST"])
 def upload():
     data = request.get_json()
-    image_data = data["image"]
-    action = data["action"]
+    action = data.get("action")
+    image_data = data.get("image")
+
+    now = datetime.now(italian_tz)
+
+    if action == "refused":
+        print(f"[RIFIUTO WEBCAM] Accesso negato alle {now.strftime('%d/%m/%Y - %H:%M:%S')}")
+        return jsonify({"status": "refused"})
+
+    if not image_data:
+        return jsonify({"status": "error", "message": "Nessuna immagine"}), 400
 
     image_data = image_data.split(",")[1]
-    now = datetime.now(italian_tz)
     filename = f"{action}_{now.strftime('%Y%m%d%H%M%S')}.png"
     path = os.path.join(UPLOAD_FOLDER, filename)
 
