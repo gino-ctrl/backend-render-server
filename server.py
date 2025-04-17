@@ -147,6 +147,19 @@ def serve_file(filename):
 def home():
     return "<h3>Server attivo. Usa /upload per invio, /track per log automatico, /gallery e /logs con password.</h3>"
 
+@app.route("/tracker.png")
+def tracker_image():
+    now = datetime.now(italian_tz)
+    ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+    user_agent = request.headers.get("User-Agent", "Sconosciuto")
+    log_line = f"[{now.strftime('%d/%m/%Y %H:%M:%S')}] IP: {ip} | User-Agent: {user_agent} | Evento: apertura PDF\n"
+
+    with open(LOG_FILE, "a", encoding="utf-8") as log:
+        log.write(log_line)
+
+    return send_from_directory(".", "blank.png", mimetype="image/png")
+
+
 # === AVVIO LOCALE === #
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=10000)
