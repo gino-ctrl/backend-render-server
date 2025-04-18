@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, send_from_directory, Response
 from flask_cors import CORS
 from datetime import datetime
 from functools import wraps
-import base64, os, pytz
+import base64, os, pytz, json
 
 # === CONFIGURAZIONE === #
 UPLOAD_FOLDER = "uploads"
@@ -36,130 +36,95 @@ def requires_auth(f):
         return f(*args, **kwargs)
     return decorated
 
-# === ENDPOINT: /upload === #
-@app.route("/upload", methods=["POST"])
-def upload():
-    data = request.get_json()
-    image_data = data["image"]
-    action = data.get("action", "unknown")
-    image_data = image_data.split(",")[1]
+# === UTILITY: Estrai IP reale === #
+def estrai_ip():
+    ip_raw = request.headers.get("X-Forwarded-For", request.remote_addr)
+    ip_list = [ip.strip() for ip in ip_raw.split(",")]
+    ip_real = ip_list[0] if ip_list else request.remote_addr
+    proxy_info = f" (proxy: {', '.join(ip_list[1:])})" if len(ip_list) > 1 else ""
+    return ip_real, proxy_info
 
-    now = datetime.now(italian_tz)
-    timestamp_str = now.strftime('%Y%m%d%H%M%S')
-    filename = f"{action}_{timestamp_str}.png"
-    filepath = os.path.join(UPLOAD_FOLDER, filename)
+# === UTILITY: Traduzioni umane === #
+def descrizione_lingua(code):
+    lang_map = {
+        "it": "Italiano",
+        "en": "Inglese",
+        "fr": "Francese",
+        "de": "Tedesco",
+        "es": "Spagnolo",
+        "pt": "Portoghese",
+        "ru": "Russo",
+        "zh": "Cinese",
+        "ja": "Giapponese",
+        "ar": "Arabo"
+    }
+    parts = code.split("-")
+    lang = lang_map.get(parts[0], parts[0])
+    country = parts[1].upper() if len(parts) > 1 else ""
+    return f"{lang} ({country})" if country else lang
 
-    # Salva immagine
-    with open(filepath, "wb") as f:
-        f.write(base64.b64decode(image_data))
+def descrizione_browser(browser):
+    browser_map = {
+        "chrome": "Google Chrome",
+        "firefox": "Mozilla Firefox",
+        "safari": "Apple Safari",
+        "edge": "Microsoft Edge",
+        "opera": "Opera",
+        "android": "Browser Android",
+        "ie": "Internet Explorer"
+    }
+    return browser_map.get(browser.lower(), browser)
 
-    # Salva log
-    ip = request.headers.get("X-Forwarded-For", request.remote_addr)
-    user_agent = request.headers.get("User-Agent", "Sconosciuto")
-    log_line = f"[{now.strftime('%d/%m/%Y %H:%M:%S')}] IP: {ip} | User-Agent: {user_agent} | File: {filename}\n"
-    with open(LOG_FILE, "a", encoding="utf-8") as log:
-        log.write(log_line)
+def descrizione_piattaforma(platform):
+    platform_map = {
+        "windows": "Windows",
+        "macos": "macOS",
+        "linux": "Linux",
+        "android": "Android",
+        "iphone": "iPhone",
+        "ipad": "iPad"
+    }
+    return platform_map.get(platform.lower(), platform)
 
-    return jsonify({"status": "success", "file": filename})
+# === UTILITY: Altri header informativi === #
+def estrai_info(extra=None):
+    lang_raw = request.headers.get("Accept-Language", "?").split(',')[0]
+    lang_desc = descrizione_lingua(lang_raw)
+    referer = request.headers.get("Referer", "nessun referer")
+    dnt = request.headers.get("DNT", "Non specificato")
+    encoding = request.headers.get("Accept-Encoding", "Non specificato")
+    connection = request.headers.get("Connection", "Non specificato")
+    ua = request.user_agent
+    platform = descrizione_piattaforma(ua.platform or "sconosciuto")
+    browser = descrizione_browser(ua.browser or "browser sconosciuto")
+    version = ua.version or "?"
+
+    info = f"Sistema operativo: {platform}, Browser: {browser} {version}, Lingua preferita: {lang_desc}, Do Not Track: {dnt}, Tipo connessione: {connection}, Compressione: {encoding}, Pagina di provenienza: {referer}"
+
+    if extra:
+        try:
+            extra_data = json.loads(extra)
+            if isinstance(extra_data, dict):
+                for k, v in extra_data.items():
+                    k_label = k.replace('_',' ').capitalize()
+                    info += f", {k_label}: {v}"
+        except:
+            info += f" | Extra: {extra}"
+
+    return info
 
 # === ENDPOINT: /track === #
 @app.route("/track", methods=["POST"])
 def track():
     now = datetime.now(italian_tz)
-    ip = request.headers.get("X-Forwarded-For", request.remote_addr)
+    ip_real, proxy_info = estrai_ip()
     user_agent = request.headers.get("User-Agent", "Sconosciuto")
-    log_line = f"[{now.strftime('%d/%m/%Y %H:%M:%S')}] IP: {ip} | User-Agent: {user_agent} | Evento: visita sito\n"
+    data = request.get_json(silent=True) or {}
+    extra = json.dumps(data, ensure_ascii=False)
+    info = estrai_info(extra=extra)
+    log_line = f"[{now.strftime('%d/%m/%Y %H:%M:%S')}] IP: {ip_real}{proxy_info} | {info} | Evento: visita sito\n"
 
     with open(LOG_FILE, "a", encoding="utf-8") as log:
         log.write(log_line)
 
     return jsonify({"status": "logged"})
-
-# === ENDPOINT: /logs (protetto) === #
-@app.route("/logs")
-@requires_auth
-def logs():
-    try:
-        with open(LOG_FILE, "r", encoding="utf-8") as log_file:
-            lines = log_file.readlines()
-    except FileNotFoundError:
-        lines = ["Nessun accesso registrato."]
-
-    html_lines = "<br>".join(
-        line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;") for line in lines
-    )
-
-    return f"""
-    <html>
-    <head><title>Log Accessi</title><meta name="viewport" content="width=device-width, initial-scale=1"></head>
-    <body style="font-family: monospace; padding: 20px; background: #f0f0f0;">
-      <h2>Log Accessi</h2>
-      <div style="white-space: pre-wrap; background: #fff; padding: 1em; border-radius: 8px;">
-        {html_lines}
-      </div>
-    </body>
-    </html>
-    """
-
-# === ENDPOINT: /gallery (protetto) === #
-@app.route("/gallery")
-@requires_auth
-def gallery():
-    files = sorted(os.listdir(UPLOAD_FOLDER), reverse=True)
-    images_html = ""
-
-    for filename in files:
-        if not filename.endswith(".png"):
-            continue
-        try:
-            timestamp_str = filename.rsplit("_", 1)[1].replace(".png", "")
-            timestamp = italian_tz.localize(datetime.strptime(timestamp_str, "%Y%m%d%H%M%S"))
-            readable_time = timestamp.strftime("%d/%m/%Y - %H:%M:%S")
-        except:
-            readable_time = "Data sconosciuta"
-
-        images_html += f"""
-        <div style="margin: 15px; text-align: center; max-width: 400px;">
-          <img src="/uploads/{filename}" style="max-width: 100%; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.2);"><br>
-          <div style="margin-top: 6px; font-size: 14px;">{readable_time}</div>
-        </div>
-        """
-
-    return f"""
-    <html>
-    <head><title>Galleria Accessi</title><meta name="viewport" content="width=device-width, initial-scale=1"></head>
-    <body style="font-family: sans-serif; padding: 20px; background: #fafafa;">
-      <h2 style="text-align: center;">Galleria Immagini</h2>
-      <div style="display: flex; flex-wrap: wrap; justify-content: center;">
-        {images_html}
-      </div>
-    </body>
-    </html>
-    """
-
-# === FILE STATICO: /uploads/<filename> === #
-@app.route("/uploads/<filename>")
-def serve_file(filename):
-    return send_from_directory(UPLOAD_FOLDER, filename)
-
-# === TEST === #
-@app.route("/")
-def home():
-    return "<h3>Server attivo. Usa /upload per invio, /track per log automatico, /gallery e /logs con password.</h3>"
-
-@app.route("/tracker.png")
-def tracker_image():
-    now = datetime.now(italian_tz)
-    ip = request.headers.get("X-Forwarded-For", request.remote_addr)
-    user_agent = request.headers.get("User-Agent", "Sconosciuto")
-    log_line = f"[{now.strftime('%d/%m/%Y %H:%M:%S')}] IP: {ip} | User-Agent: {user_agent} | Evento: apertura ricevuta\n"
-
-    with open(LOG_FILE, "a", encoding="utf-8") as log:
-        log.write(log_line)
-
-    return send_from_directory(".", "blank.png", mimetype="image/png")
-
-
-# === AVVIO LOCALE === #
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=10000)
