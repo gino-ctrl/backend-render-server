@@ -82,7 +82,8 @@ def descrizione_piattaforma(platform):
         "linux": "Linux",
         "android": "Android",
         "iphone": "iPhone",
-        "ipad": "iPad"
+        "ipad": "iPad",
+        "mac": "macOS"
     }
     return platform_map.get(platform.lower(), platform)
 
@@ -99,32 +100,30 @@ def estrai_info(extra=None):
     browser = descrizione_browser(ua.browser or "browser sconosciuto")
     version = ua.version or "?"
 
-    info = f"Sistema operativo: {platform}, Browser: {browser} {version}, Lingua preferita: {lang_desc}, Do Not Track: {dnt}, Tipo connessione: {connection}, Compressione: {encoding}, Pagina di provenienza: {referer}"
+    info = f"Sistema operativo: {platform}, Browser: {browser} {version}, Lingua preferita: {lang_desc}, Do Not Track: {dnt}, Tipo connessione: {connection}, Compressione: {encoding}, Provenienza: {referer}"
 
     if extra:
         try:
             extra_data = json.loads(extra)
             if isinstance(extra_data, dict):
                 for k, v in extra_data.items():
-                    k_label = k.replace('_',' ').capitalize()
-                    info += f", {k_label}: {v}"
+                    chiave = k.replace('_', ' ').capitalize()
+                    info += f", {chiave}: {v}"
         except:
             info += f" | Extra: {extra}"
 
     return info
 
-# === ENDPOINT: /track === #
-@app.route("/track", methods=["POST"])
-def track():
+# === ENDPOINT: /tracker.png === #
+@app.route("/tracker.png")
+def tracker_image():
     now = datetime.now(italian_tz)
     ip_real, proxy_info = estrai_ip()
     user_agent = request.headers.get("User-Agent", "Sconosciuto")
-    data = request.get_json(silent=True) or {}
-    extra = json.dumps(data, ensure_ascii=False)
-    info = estrai_info(extra=extra)
-    log_line = f"[{now.strftime('%d/%m/%Y %H:%M:%S')}] IP: {ip_real}{proxy_info} | {info} | Evento: visita sito\n"
+    info = estrai_info()
+    log_line = f"[{now.strftime('%d/%m/%Y %H:%M:%S')}] IP reale: {ip_real}{proxy_info} | {info} | Evento: apertura ricevuta\n"
 
     with open(LOG_FILE, "a", encoding="utf-8") as log:
         log.write(log_line)
 
-    return jsonify({"status": "logged"})
+    return send_from_directory(".", "blank.png", mimetype="image/png")
